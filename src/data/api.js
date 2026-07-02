@@ -212,15 +212,28 @@ export async function deleteBrand(id) {
 
 export async function createOrder({ customer, items, total, notes }) {
   if (isSupabaseConfigured) {
-    // Generamos el id en el cliente para NO tener que leer de vuelta el pedido:
-    // los usuarios anónimos pueden crear pedidos pero, por seguridad (RLS), no
-    // pueden leerlos (solo el admin). Por eso insertamos sin `.select()`.
+    // Camino ideal: función atómica que crea el pedido y descuenta stock.
+    const { data, error } = await supabase.rpc('place_order', {
+      p_customer: { name: customer.name, phone: customer.phone, address: customer.address },
+      p_items: items.map((it) => ({ id: it.id, quantity: it.quantity })),
+      p_notes: notes || null,
+    })
+    if (!error && data) return { id: data }
+
+    // Si la función aún no está desplegada (no corriste la migración), caemos
+    // al método anterior para no romper la tienda. Errores reales de negocio
+    // (p. ej. "stock insuficiente") sí se propagan.
+    const missingFn =
+      error &&
+      (error.code === 'PGRST202' ||
+        /place_order|function|does not exist|not find/i.test(error.message || ''))
+    if (error && !missingFn) throw error
+
     const orderId =
       typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-
-    const { error } = await supabase.from('orders').insert({
+    const { error: e1 } = await supabase.from('orders').insert({
       id: orderId,
       customer_name: customer.name,
       customer_phone: customer.phone,
@@ -229,8 +242,7 @@ export async function createOrder({ customer, items, total, notes }) {
       total,
       status: 'pendiente',
     })
-    if (error) throw error
-
+    if (e1) throw e1
     const rows = items.map((it) => ({
       order_id: orderId,
       product_id: it.id,
@@ -243,6 +255,7 @@ export async function createOrder({ customer, items, total, notes }) {
     return { id: orderId }
   }
 
+  // Modo demo: crea el pedido y descuenta stock en memoria.
   const order = {
     id: genId('ord'),
     created_at: now(),
@@ -254,7 +267,7 @@ export async function createOrder({ customer, items, total, notes }) {
     status: 'pendiente',
   }
   db.orders.unshift(order)
-  items.forEach((it) =>
+  items.forEach((it) => {
     db.orderItems.push({
       id: genId('oi'),
       order_id: order.id,
@@ -262,8 +275,10 @@ export async function createOrder({ customer, items, total, notes }) {
       product_name: it.name,
       unit_price: it.price,
       quantity: it.quantity,
-    }),
-  )
+    })
+    const prod = db.products.find((p) => p.id === it.id)
+    if (prod) prod.stock = Math.max(0, (prod.stock ?? 0) - it.quantity)
+  })
   return order
 }
 

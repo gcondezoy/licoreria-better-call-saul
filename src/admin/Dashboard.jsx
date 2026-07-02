@@ -1,104 +1,235 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
   BarChart,
   Bar,
-  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
 } from 'recharts'
-import { DollarSign, ClipboardList, Package, AlertTriangle, ArrowRight } from 'lucide-react'
+import {
+  DollarSign,
+  ClipboardList,
+  Receipt,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  Boxes,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-react'
 import { useOrders, useProducts } from '../hooks/useCatalog'
 import { Spinner } from '../components/ui'
 import { formatPrice } from '../config/site'
 import { STATUS_META } from './orderStatus'
+import { RANGES, getRange, computeAnalytics } from './analytics'
 
-const LOW_STOCK = 5
+const money0 = (v) => `S/ ${Math.round(v).toLocaleString('es-PE')}`
+const CAT_COLORS = ['#c8962c', '#c4202f', '#7fa8bf', '#d8c07a', '#8a2a38', '#a0522d', '#d4b483', '#b8c4cc']
+
+const TOOLTIP_STYLE = {
+  background: '#1a1a1e',
+  border: '1px solid #3a3a42',
+  borderRadius: 12,
+  color: '#f4efe6',
+  fontSize: 12,
+}
+
+function DeltaBadge({ value }) {
+  if (value == null) return <span className="text-xs text-muted">— sin comparación</span>
+  const up = value >= 0
+  const Icon = up ? TrendingUp : TrendingDown
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-semibold ${
+        up ? 'text-green-400' : 'text-wine-light'
+      }`}
+    >
+      <Icon size={13} />
+      {up ? '+' : ''}
+      {value.toFixed(0)}% <span className="font-normal text-muted">vs periodo ant.</span>
+    </span>
+  )
+}
 
 export default function Dashboard() {
+  const [rangeKey, setRangeKey] = useState('30d')
   const { data: orders, isLoading: lo } = useOrders('todos')
   const { data: products, isLoading: lp } = useProducts({ activeOnly: false })
 
-  const stats = useMemo(() => {
-    const os = orders || []
-    const ps = products || []
-    const revenue = os
-      .filter((o) => o.status !== 'cancelado')
-      .reduce((s, o) => s + Number(o.total || 0), 0)
-    const pending = os.filter((o) => o.status === 'pendiente').length
-    const lowStock = ps.filter((p) => (p.stock ?? 0) <= LOW_STOCK)
-
-    // Top productos por unidades vendidas
-    const unitMap = {}
-    os.forEach((o) =>
-      (o.items || []).forEach((it) => {
-        unitMap[it.product_name] = (unitMap[it.product_name] || 0) + it.quantity
-      }),
-    )
-    const topProducts = Object.entries(unitMap)
-      .map(([name, units]) => ({ name, units }))
-      .sort((a, b) => b.units - a.units)
-      .slice(0, 6)
-
-    return { revenue, pending, lowStock, topProducts, orderCount: os.length, productCount: ps.length }
-  }, [orders, products])
+  const a = useMemo(
+    () => computeAnalytics(orders || [], products || [], getRange(rangeKey)),
+    [orders, products, rangeKey],
+  )
 
   if (lo || lp) return <Spinner label="Cargando dashboard…" />
 
-  const cards = [
-    { icon: DollarSign, label: 'Ventas totales', value: formatPrice(stats.revenue), tone: 'text-amber-400' },
-    { icon: ClipboardList, label: 'Pedidos', value: stats.orderCount, sub: `${stats.pending} pendientes`, tone: 'text-cream' },
-    { icon: Package, label: 'Productos', value: stats.productCount, tone: 'text-cream' },
-    { icon: AlertTriangle, label: 'Stock bajo', value: stats.lowStock.length, tone: stats.lowStock.length ? 'text-wine-light' : 'text-cream' },
+  const kpis = [
+    { icon: DollarSign, label: 'Ingresos', value: formatPrice(a.current.revenue), delta: a.deltas.revenue },
+    { icon: ClipboardList, label: 'Pedidos', value: a.current.orderCount, delta: a.deltas.orderCount },
+    { icon: Receipt, label: 'Ticket promedio', value: formatPrice(a.current.aov), delta: a.deltas.aov },
+    {
+      icon: TrendingUp,
+      label: 'Margen',
+      value: a.hasCost ? formatPrice(a.current.margin) : '—',
+      delta: a.hasCost ? a.deltas.margin : null,
+      hint: a.hasCost ? null : 'Ingresa costos en Productos',
+    },
   ]
 
   const recent = (orders || []).slice(0, 6)
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="font-display text-3xl font-semibold text-cream">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted">Resumen de tu licorería</p>
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-semibold text-cream">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted">Resumen de tu licorería</p>
+        </div>
+        {/* Selector de rango */}
+        <div className="flex rounded-full border border-ink-700 bg-ink-900 p-1">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setRangeKey(r.key)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                rangeKey === r.key ? 'bg-amber-500 text-ink-950' : 'text-muted hover:text-cream'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </header>
 
-      {/* Tarjetas */}
+      {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(({ icon: Icon, label, value, sub, tone }) => (
+        {kpis.map(({ icon: Icon, label, value, delta, hint }) => (
           <div key={label} className="card p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wider text-muted">{label}</span>
-              <Icon size={18} className={tone} />
+              <Icon size={18} className="text-amber-400" />
             </div>
-            <p className={`mt-3 font-display text-2xl font-semibold ${tone}`}>{value}</p>
-            {sub && <p className="mt-1 text-xs text-muted">{sub}</p>}
+            <p className="mt-2 font-display text-2xl font-semibold text-cream">{value}</p>
+            <div className="mt-1.5">{hint ? <span className="text-xs text-muted">{hint}</span> : <DeltaBadge value={delta} />}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Top productos */}
+      {/* Ventas en el tiempo + categorías */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="card p-6 lg:col-span-2">
+          <h2 className="font-display text-lg font-semibold text-cream">Ventas en el tiempo</h2>
+          <div className="mt-4 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={a.series} margin={{ left: -12, right: 8, top: 8 }}>
+                <defs>
+                  <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#c8962c" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#c8962c" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: '#a19a8c', fontSize: 11 }}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
+                />
+                <YAxis tick={{ fill: '#a19a8c', fontSize: 11 }} tickFormatter={money0} width={64} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(v) => [formatPrice(v), 'Ventas']}
+                  cursor={{ stroke: '#c8962c', strokeOpacity: 0.3 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#e0b354"
+                  strokeWidth={2}
+                  fill="url(#salesGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         <div className="card p-6">
-          <h2 className="font-display text-lg font-semibold text-cream">Más vendidos (unidades)</h2>
-          {stats.topProducts.length ? (
+          <h2 className="font-display text-lg font-semibold text-cream">Ingresos por categoría</h2>
+          {a.byCategory.length ? (
+            <>
+              <div className="mt-2 h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={a.byCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={42}
+                      outerRadius={68}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {a.byCategory.map((_, i) => (
+                        <Cell key={i} fill={CAT_COLORS[i % CAT_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatPrice(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ul className="mt-3 space-y-1.5">
+                {a.byCategory.slice(0, 5).map((c, i) => (
+                  <li key={c.name} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-cream">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ background: CAT_COLORS[i % CAT_COLORS.length] }}
+                      />
+                      {c.name}
+                    </span>
+                    <span className="text-muted">{formatPrice(c.value)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="mt-6 text-sm text-muted">Aún no hay ventas en este periodo.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Métricas secundarias */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <MiniStat icon={XCircle} label="Tasa de cancelación" value={`${a.cancelRate.toFixed(0)}%`} tone={a.cancelRate > 15 ? 'text-wine-light' : 'text-cream'} />
+        <MiniStat icon={Boxes} label="Valor de inventario" value={money0(a.inventoryValue)} tone="text-cream" />
+        <MiniStat icon={AlertTriangle} label="Productos con stock bajo" value={a.lowStock.length} tone={a.lowStock.length ? 'text-amber-400' : 'text-cream'} />
+      </div>
+
+      {/* Top productos por ingreso + stock bajo */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="card p-6">
+          <h2 className="font-display text-lg font-semibold text-cream">Top productos por ingreso</h2>
+          {a.topProducts.length ? (
             <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.topProducts} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <BarChart data={a.topProducts} layout="vertical" margin={{ left: 10, right: 16 }}>
                   <XAxis type="number" hide />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={110}
+                    width={120}
                     tick={{ fill: '#a19a8c', fontSize: 11 }}
-                    tickFormatter={(v) => (v.length > 16 ? v.slice(0, 16) + '…' : v)}
+                    tickFormatter={(v) => (v.length > 18 ? v.slice(0, 18) + '…' : v)}
                   />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                    contentStyle={{ background: '#1a1a1e', border: '1px solid #3a3a42', borderRadius: 12, color: '#f4efe6' }}
-                  />
-                  <Bar dataKey="units" radius={[0, 6, 6, 0]}>
-                    {stats.topProducts.map((_, i) => (
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [formatPrice(v), 'Ingreso']} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                    {a.topProducts.map((_, i) => (
                       <Cell key={i} fill={i === 0 ? '#c8962c' : '#a67a1f'} />
                     ))}
                   </Bar>
@@ -106,11 +237,10 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="mt-6 text-sm text-muted">Aún no hay ventas registradas.</p>
+            <p className="mt-6 text-sm text-muted">Aún no hay ventas en este periodo.</p>
           )}
         </div>
 
-        {/* Stock bajo */}
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-cream">Stock bajo</h2>
@@ -118,14 +248,16 @@ export default function Dashboard() {
               Gestionar <ArrowRight size={14} />
             </Link>
           </div>
-          {stats.lowStock.length ? (
+          {a.lowStock.length ? (
             <ul className="mt-4 divide-y divide-ink-800">
-              {stats.lowStock.slice(0, 6).map((p) => (
+              {a.lowStock.slice(0, 7).map((p) => (
                 <li key={p.id} className="flex items-center justify-between py-2.5 text-sm">
                   <span className="truncate text-cream">{p.name}</span>
-                  <span className={`ml-3 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    (p.stock ?? 0) === 0 ? 'bg-wine/30 text-wine-light' : 'bg-amber-500/15 text-amber-400'
-                  }`}>
+                  <span
+                    className={`ml-3 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      (p.stock ?? 0) === 0 ? 'bg-wine/30 text-wine-light' : 'bg-amber-500/15 text-amber-400'
+                    }`}
+                  >
                     {p.stock ?? 0} und.
                   </span>
                 </li>
@@ -166,6 +298,20 @@ export default function Dashboard() {
         ) : (
           <p className="p-8 text-center text-sm text-muted">Aún no hay pedidos.</p>
         )}
+      </div>
+    </div>
+  )
+}
+
+function MiniStat({ icon: Icon, label, value, tone }) {
+  return (
+    <div className="card flex items-center gap-4 p-5">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ink-800 text-amber-400">
+        <Icon size={20} />
+      </span>
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted">{label}</p>
+        <p className={`mt-0.5 font-display text-xl font-semibold ${tone}`}>{value}</p>
       </div>
     </div>
   )

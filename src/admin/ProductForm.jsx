@@ -8,6 +8,7 @@ const schema = z.object({
   category_id: z.string().min(1, 'Elige una categoría'),
   brand_id: z.string().optional().nullable(),
   price: z.coerce.number().min(0, 'Precio inválido'),
+  cost: z.coerce.number().min(0, 'Costo inválido').optional(),
   stock: z.coerce.number().int().min(0, 'Stock inválido'),
   volume_ml: z.coerce.number().int().min(0).optional(),
   abv: z.coerce.number().min(0).max(100).optional(),
@@ -38,6 +39,7 @@ export default function ProductForm({ product, categories, brands, onSubmit, sav
       category_id: product?.category_id || '',
       brand_id: product?.brand_id || '',
       price: product?.price ?? '',
+      cost: product?.cost ?? '',
       stock: product?.stock ?? '',
       volume_ml: product?.volume_ml ?? 750,
       abv: product?.abv ?? '',
@@ -94,17 +96,25 @@ export default function ProductForm({ product, categories, brands, onSubmit, sav
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <label className="label">Precio (S/)</label>
+          <label className="label">Precio venta (S/)</label>
           <input type="number" step="0.01" {...register('price')} className="input" />
           {errors.price && <p className="mt-1 text-xs text-wine-light">{errors.price.message}</p>}
+        </div>
+        <div>
+          <label className="label">Costo (S/)</label>
+          <input type="number" step="0.01" {...register('cost')} className="input" placeholder="para margen" />
+          {errors.cost && <p className="mt-1 text-xs text-wine-light">{errors.cost.message}</p>}
         </div>
         <div>
           <label className="label">Stock</label>
           <input type="number" {...register('stock')} className="input" />
           {errors.stock && <p className="mt-1 text-xs text-wine-light">{errors.stock.message}</p>}
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label">Volumen (ml)</label>
           <input type="number" {...register('volume_ml')} className="input" />
