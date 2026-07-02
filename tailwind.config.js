@@ -18,9 +18,11 @@ export default {
           500: '#c8962c',
           600: '#a67a1f',
         },
+        // Rojo tomado del logo real de la marca (Better Call Saul Liquor Store).
         wine: {
-          DEFAULT: '#6b1f2a',
-          light: '#8a2a38',
+          DEFAULT: '#c4202f',
+          light: '#e2374c',
+          dark: '#8f1522',
         },
         cream: '#f4efe6',
         muted: '#a19a8c',

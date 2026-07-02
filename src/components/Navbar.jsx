@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ShoppingBag, Menu, X, Wine, Search } from 'lucide-react'
+import { ShoppingBag, Menu, X, Search } from 'lucide-react'
 import { useCart } from '../store/cartStore'
 import { SITE } from '../config/site'
 
@@ -20,13 +20,13 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-ink-800/80 bg-ink-950/85 backdrop-blur-xl">
       <div className="container-page flex h-16 items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-ink-950">
-            <Wine size={20} />
-          </span>
-          <span className="font-display text-lg font-semibold leading-none text-cream">
-            {SITE.name}
-          </span>
+        <Link to="/" className="flex items-center" onClick={() => setOpen(false)}>
+          <img
+            src="/licoreria-better-call-saul.jpg"
+            alt={SITE.name}
+            className="h-14 w-auto shrink-0 mix-blend-screen"
+          />
+          <span className="sr-only">{SITE.name}</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

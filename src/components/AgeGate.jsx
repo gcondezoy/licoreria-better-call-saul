@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Wine } from 'lucide-react'
 import { SITE } from '../config/site'
 
 const KEY = 'licoreria_age_ok'
@@ -21,10 +20,12 @@ export default function AgeGate() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/95 p-5 backdrop-blur-md animate-fade-in">
       <div className="card w-full max-w-md p-8 text-center animate-fade-up">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-ink-950">
-          <Wine size={30} />
-        </span>
-        <h2 className="mt-6 font-display text-2xl font-semibold text-cream">
+        <img
+          src="/licoreria-better-call-saul.jpg"
+          alt={SITE.name}
+          className="mx-auto h-24 w-auto mix-blend-screen"
+        />
+        <h2 className="mt-4 font-display text-2xl font-semibold text-cream">
           ¿Eres mayor de edad?
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-muted">

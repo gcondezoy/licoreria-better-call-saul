@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Wine, MapPin, Clock, Phone, Instagram, Facebook } from 'lucide-react'
+import { MapPin, Clock, Phone, Instagram, Facebook } from 'lucide-react'
 import { SITE } from '../config/site'
 
 export default function Footer() {
@@ -7,12 +7,11 @@ export default function Footer() {
     <footer className="mt-20 border-t border-ink-800 bg-ink-900">
       <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-ink-950">
-              <Wine size={20} />
-            </span>
-            <span className="font-display text-lg font-semibold text-cream">{SITE.name}</span>
-          </div>
+          <img
+            src="/licoreria-better-call-saul.jpg"
+            alt={SITE.name}
+            className="h-20 w-auto mix-blend-screen"
+          />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
             {SITE.tagline}. {SITE.deliveryNote}.
           </p>
