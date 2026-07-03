@@ -44,7 +44,7 @@ export default function OrdersAdmin() {
               <div key={o.id} className="card overflow-hidden">
                 <button
                   onClick={() => setExpanded(isOpen ? null : o.id)}
-                  className="flex w-full items-center gap-4 p-4 text-left"
+                  className="grid w-full grid-cols-[1fr_104px_84px_18px] items-center gap-3 p-4 text-left sm:grid-cols-[1fr_132px_104px_20px]"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -64,13 +64,13 @@ export default function OrdersAdmin() {
                       {(o.items || []).reduce((n, it) => n + it.quantity, 0)} artículo(s)
                     </p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>
+                  <span className={`justify-self-start rounded-full px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>
                     {meta.label}
                   </span>
-                  <span className="shrink-0 font-semibold text-amber-400">{formatPrice(o.total)}</span>
+                  <span className="justify-self-end font-semibold text-amber-400">{formatPrice(o.total)}</span>
                   <ChevronDown
                     size={18}
-                    className={`shrink-0 text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={`justify-self-center text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
 
