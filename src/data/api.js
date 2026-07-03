@@ -22,6 +22,15 @@ function byNewest(a, b) {
 
 // ============================ PRODUCTOS ============================
 
+// Filtra por categoría real, o por los "slugs especiales" ofertas/combos.
+function filterByCategory(rows, categorySlug) {
+  if (!categorySlug) return rows
+  if (categorySlug === 'ofertas')
+    return rows.filter((p) => Number(p.compare_at_price || 0) > Number(p.price || 0))
+  if (categorySlug === 'combos') return rows.filter((p) => p.is_combo)
+  return rows.filter((p) => p.category?.slug === categorySlug)
+}
+
 export async function listProducts({
   categorySlug,
   brandId,
@@ -36,14 +45,12 @@ export async function listProducts({
     if (search) q = q.ilike('name', `%${search}%`)
     const { data, error } = await q
     if (error) throw error
-    let rows = data || []
-    if (categorySlug) rows = rows.filter((p) => p.category?.slug === categorySlug)
-    return sortProducts(rows, sort)
+    return sortProducts(filterByCategory(data || [], categorySlug), sort)
   }
 
   let rows = db.products.map(enrich)
   if (activeOnly) rows = rows.filter((p) => p.is_active)
-  if (categorySlug) rows = rows.filter((p) => p.category?.slug === categorySlug)
+  rows = filterByCategory(rows, categorySlug)
   if (brandId) rows = rows.filter((p) => p.brand_id === brandId)
   if (search) {
     const s = search.toLowerCase()
@@ -255,7 +262,7 @@ export async function createOrder({ customer, items, total, notes }) {
     return { id: orderId }
   }
 
-  // Modo demo: crea el pedido y descuenta stock en memoria.
+  // Modo demo: crea el pedido como solicitud (sin tocar stock).
   const order = {
     id: genId('ord'),
     created_at: now(),
@@ -265,9 +272,10 @@ export async function createOrder({ customer, items, total, notes }) {
     notes: notes || null,
     total,
     status: 'pendiente',
+    stock_applied: false,
   }
   db.orders.unshift(order)
-  items.forEach((it) => {
+  items.forEach((it) =>
     db.orderItems.push({
       id: genId('oi'),
       order_id: order.id,
@@ -275,10 +283,8 @@ export async function createOrder({ customer, items, total, notes }) {
       product_name: it.name,
       unit_price: it.price,
       quantity: it.quantity,
-    })
-    const prod = db.products.find((p) => p.id === it.id)
-    if (prod) prod.stock = Math.max(0, (prod.stock ?? 0) - it.quantity)
-  })
+    }),
+  )
   return order
 }
 
@@ -303,16 +309,61 @@ export async function listOrders({ status } = {}) {
 
 export async function updateOrderStatus(id, status) {
   if (isSupabaseConfigured) {
-    const { data, error } = await supabase
+    // RPC que ajusta el stock según la transición (descuenta al confirmar,
+    // devuelve al cancelar un confirmado). Fallback si aún no está desplegada.
+    const { error } = await supabase.rpc('set_order_status', {
+      p_order_id: id,
+      p_status: status,
+    })
+    if (!error) return { id, status }
+    const missingFn =
+      error.code === 'PGRST202' ||
+      /set_order_status|function|does not exist|not find/i.test(error.message || '')
+    if (!missingFn) throw error
+    const { data, error: e2 } = await supabase
       .from('orders')
       .update({ status })
       .eq('id', id)
       .select()
       .single()
-    if (error) throw error
+    if (e2) throw e2
     return data
   }
+
+  // Modo demo: replica el manejo de stock del RPC.
   const i = db.orders.findIndex((o) => o.id === id)
-  db.orders[i] = { ...db.orders[i], status }
+  if (i === -1) return null
+  const order = db.orders[i]
+  const committed = status === 'confirmado' || status === 'entregado'
+  const applied = Boolean(order.stock_applied)
+  const items = db.orderItems.filter((it) => it.order_id === id)
+
+  if (committed && !applied) {
+    items.forEach((it) => {
+      const p = db.products.find((x) => x.id === it.product_id)
+      if (p) p.stock = Math.max(0, (p.stock ?? 0) - it.quantity)
+    })
+    order.stock_applied = true
+  } else if (!committed && applied) {
+    items.forEach((it) => {
+      const p = db.products.find((x) => x.id === it.product_id)
+      if (p) p.stock = (p.stock ?? 0) + it.quantity
+    })
+    order.stock_applied = false
+  }
+  order.status = status
+  db.orders[i] = { ...order }
   return db.orders[i]
+}
+
+// Elimina un pedido. Solo lo permitimos sobre pedidos cancelados (el stock ya
+// fue devuelto), útil para limpiar pruebas/spam sin afectar inventario.
+export async function deleteOrder(id) {
+  if (isSupabaseConfigured) {
+    const { error } = await supabase.from('orders').delete().eq('id', id)
+    if (error) throw error
+    return
+  }
+  db.orders = db.orders.filter((o) => o.id !== id)
+  db.orderItems = db.orderItems.filter((it) => it.order_id !== id)
 }

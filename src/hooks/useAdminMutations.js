@@ -38,10 +38,13 @@ export function useBrandMutations() {
 
 export function useOrderMutations() {
   const invalidate = useInvalidate()
+  // Al cambiar estado se mueve el stock, por eso también refrescamos productos.
+  const opts = { onSuccess: () => invalidate(['orders', 'products', 'featured']) }
   return {
     updateStatus: useMutation({
       mutationFn: ({ id, status }) => api.updateOrderStatus(id, status),
-      onSuccess: () => invalidate(['orders']),
+      ...opts,
     }),
+    remove: useMutation({ mutationFn: api.deleteOrder, ...opts }),
   }
 }

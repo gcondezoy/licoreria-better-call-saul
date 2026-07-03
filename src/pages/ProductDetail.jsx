@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Minus, Plus, ShoppingBag, Check, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Minus, Plus, ShoppingBag, Check, MessageCircle, Package } from 'lucide-react'
 import { useProduct, useProducts } from '../hooks/useCatalog'
 import ProductImage from '../components/ProductImage'
 import ProductCard from '../components/ProductCard'
 import { Spinner, EmptyState } from '../components/ui'
 import { useCart } from '../store/cartStore'
-import { formatPrice, SITE } from '../config/site'
+import { formatPrice, isOnSale, discountPct, SITE } from '../config/site'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -31,6 +31,11 @@ export default function ProductDetail() {
     )
 
   const soldOut = (product.stock ?? 0) <= 0
+  const onSale = isOnSale(product)
+  const pct = discountPct(product)
+  const comboList = product.is_combo && product.combo_items
+    ? product.combo_items.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)
+    : []
 
   function add() {
     addItem(product, qty)
@@ -61,13 +66,19 @@ export default function ProductDetail() {
 
         {/* Info */}
         <div>
-          {product.category?.name && (
-            <Link
-              to={`/catalogo?categoria=${product.category.slug}`}
-              className="eyebrow hover:underline"
-            >
-              {product.category.name}
-            </Link>
+          {product.is_combo ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-ink-950">
+              <Package size={13} /> Combo
+            </span>
+          ) : (
+            product.category?.name && (
+              <Link
+                to={`/catalogo?categoria=${product.category.slug}`}
+                className="eyebrow hover:underline"
+              >
+                {product.category.name}
+              </Link>
+            )
           )}
           <h1 className="mt-3 font-display text-3xl font-semibold leading-tight text-cream sm:text-4xl">
             {product.name}
@@ -86,10 +97,39 @@ export default function ProductDetail() {
 
           <p className="mt-6 text-base leading-relaxed text-muted">{product.description}</p>
 
-          <div className="mt-8 flex items-end gap-4">
-            <span className="font-display text-4xl font-semibold text-amber-400">
+          {/* Contenido del combo */}
+          {comboList.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+              <p className="flex items-center gap-2 text-sm font-semibold text-cream">
+                <Package size={16} className="text-amber-400" /> Este combo incluye:
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {comboList.map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-muted">
+                    <Check size={14} className="shrink-0 text-amber-400" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Precio */}
+          <div className="mt-8 flex flex-wrap items-end gap-3">
+            {onSale && (
+              <span className="font-display text-2xl text-muted line-through">
+                {formatPrice(product.compare_at_price)}
+              </span>
+            )}
+            <span
+              className={`font-display text-4xl font-semibold ${onSale ? 'text-wine-light' : 'text-amber-400'}`}
+            >
               {formatPrice(product.price)}
             </span>
+            {onSale && (
+              <span className="mb-1 rounded-full bg-wine px-2.5 py-1 text-xs font-bold text-cream">
+                -{pct}% · Ahorras {formatPrice(product.compare_at_price - product.price)}
+              </span>
+            )}
           </div>
 
           {/* Cantidad + agregar */}

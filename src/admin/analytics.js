@@ -50,11 +50,15 @@ function pct(cur, prev) {
 
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 
+// Una VENTA cuenta solo si el pedido fue confirmado o entregado.
+// Los pendientes son leads (no tocan ventas) y los cancelados no cuentan.
+const isSold = (o) => o.status === 'confirmado' || o.status === 'entregado'
+
 function summarize(list, prodById) {
-  const valid = list.filter((o) => o.status !== 'cancelado')
-  const revenue = valid.reduce((s, o) => s + Number(o.total || 0), 0)
+  const sold = list.filter(isSold)
+  const revenue = sold.reduce((s, o) => s + Number(o.total || 0), 0)
   let cogs = 0
-  valid.forEach((o) =>
+  sold.forEach((o) =>
     (o.items || []).forEach((it) => {
       const cost = prodById[it.product_id]?.cost ?? 0
       cogs += cost * it.quantity
@@ -63,11 +67,12 @@ function summarize(list, prodById) {
   return {
     revenue,
     orderCount: list.length,
+    pending: list.filter((o) => o.status === 'pendiente').length,
     cancelled: list.filter((o) => o.status === 'cancelado').length,
-    aov: valid.length ? revenue / valid.length : 0,
+    aov: sold.length ? revenue / sold.length : 0,
     cogs,
     margin: revenue - cogs,
-    validCount: valid.length,
+    soldCount: sold.length,
   }
 }
 
@@ -139,14 +144,14 @@ export function computeAnalytics(orders = [], products = [], range) {
 
   const cur = orders.filter((o) => inRange(o, range.from, range.to))
   const prev = range.prevFrom ? orders.filter((o) => inRange(o, range.prevFrom, range.prevTo)) : []
-  const validCur = cur.filter((o) => o.status !== 'cancelado')
+  const soldCur = cur.filter(isSold) // solo ventas reales para categorías/top/serie
 
   const c = summarize(cur, prodById)
   const p = summarize(prev, prodById)
 
   // Ingresos por categoría
   const catMap = {}
-  validCur.forEach((o) =>
+  soldCur.forEach((o) =>
     (o.items || []).forEach((it) => {
       const cat = prodById[it.product_id]?.category?.name || 'Otros'
       catMap[cat] = (catMap[cat] || 0) + it.unit_price * it.quantity
@@ -158,7 +163,7 @@ export function computeAnalytics(orders = [], products = [], range) {
 
   // Top productos por INGRESO (no solo unidades)
   const prodMap = {}
-  validCur.forEach((o) =>
+  soldCur.forEach((o) =>
     (o.items || []).forEach((it) => {
       prodMap[it.product_name] = (prodMap[it.product_name] || 0) + it.unit_price * it.quantity
     }),
@@ -167,6 +172,10 @@ export function computeAnalytics(orders = [], products = [], range) {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
+
+  // Conversión: de los pedidos ya resueltos (vendidos o cancelados), % que se vendió.
+  const resolved = c.soldCount + c.cancelled
+  const conversion = resolved ? (c.soldCount / resolved) * 100 : 0
 
   return {
     current: c,
@@ -179,7 +188,9 @@ export function computeAnalytics(orders = [], products = [], range) {
     },
     byCategory,
     topProducts,
-    series: buildSeries(validCur, range),
+    series: buildSeries(soldCur, range),
+    pending: c.pending,
+    conversion,
     cancelRate: c.orderCount ? (c.cancelled / c.orderCount) * 100 : 0,
     inventoryValue: products.reduce((s, p2) => s + (p2.stock ?? 0) * (p2.price ?? 0), 0),
     lowStock: products.filter((p2) => (p2.stock ?? 0) <= 5),

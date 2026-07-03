@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Truck, ShieldCheck, Clock, MessageCircle } from 'lucide-react'
-import { useFeatured, useCategories } from '../hooks/useCatalog'
+import { ArrowRight, Truck, ShieldCheck, Clock, MessageCircle, Flame, Package } from 'lucide-react'
+import { useFeatured, useCategories, useProducts } from '../hooks/useCatalog'
 import ProductCard from '../components/ProductCard'
 import ProductImage from '../components/ProductImage'
 import TrustStrip from '../components/TrustStrip'
@@ -10,6 +10,8 @@ import { SITE } from '../config/site'
 
 export default function Home() {
   const { data: featured, isLoading } = useFeatured(8)
+  const { data: offers } = useProducts({ categorySlug: 'ofertas' })
+  const { data: combos } = useProducts({ categorySlug: 'combos' })
   const { data: categories } = useCategories()
 
   return (
@@ -105,6 +107,56 @@ export default function Home() {
           </div>
         </Reveal>
       </section>
+
+      {/* OFERTAS */}
+      {offers && offers.length > 0 && (
+        <section className="container-page py-8">
+          <Reveal className="mb-6 flex items-end justify-between">
+            <div>
+              <p className="eyebrow flex items-center gap-1.5 text-wine-light">
+                <Flame size={14} /> Precios que arden
+              </p>
+              <h2 className="mt-2 font-display text-3xl font-semibold text-cream">Ofertas</h2>
+            </div>
+            <Link
+              to="/catalogo?categoria=ofertas"
+              className="hidden items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 sm:flex"
+            >
+              Ver todas <ArrowRight size={16} />
+            </Link>
+          </Reveal>
+          <Reveal delay={80} className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {offers.slice(0, 4).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </Reveal>
+        </section>
+      )}
+
+      {/* COMBOS */}
+      {combos && combos.length > 0 && (
+        <section className="container-page py-8">
+          <Reveal className="mb-6 flex items-end justify-between">
+            <div>
+              <p className="eyebrow flex items-center gap-1.5">
+                <Package size={14} /> Arma tu previa
+              </p>
+              <h2 className="mt-2 font-display text-3xl font-semibold text-cream">Combos</h2>
+            </div>
+            <Link
+              to="/catalogo?categoria=combos"
+              className="hidden items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 sm:flex"
+            >
+              Ver todos <ArrowRight size={16} />
+            </Link>
+          </Reveal>
+          <Reveal delay={80} className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {combos.slice(0, 4).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </Reveal>
+        </section>
+      )}
 
       {/* DESTACADOS */}
       <section className="container-page pb-12 pt-10">

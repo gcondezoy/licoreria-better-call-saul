@@ -1,14 +1,21 @@
 import { Link } from 'react-router-dom'
-import { Plus, Check } from 'lucide-react'
+import { Plus, Check, Package, Flame } from 'lucide-react'
 import { useState } from 'react'
 import ProductImage from './ProductImage'
-import { formatPrice } from '../config/site'
+import { formatPrice, isOnSale, discountPct } from '../config/site'
 import { useCart } from '../store/cartStore'
+
+const LOW_STOCK = 5
 
 export default function ProductCard({ product }) {
   const addItem = useCart((s) => s.addItem)
   const [added, setAdded] = useState(false)
-  const soldOut = (product.stock ?? 0) <= 0
+  const stock = product.stock ?? 0
+  const soldOut = stock <= 0
+  const lowStock = !soldOut && stock <= LOW_STOCK
+  const onSale = isOnSale(product)
+  const pct = discountPct(product)
+  const combo = product.is_combo
 
   function handleAdd(e) {
     e.preventDefault()
@@ -26,16 +33,33 @@ export default function ProductCard({ product }) {
       <div className="relative aspect-[4/5] bg-gradient-to-b from-ink-800 to-ink-900">
         <ProductImage product={product} className="h-full w-full" />
 
-        {product.category?.name && (
-          <span className="absolute left-3 top-3 rounded-full bg-ink-950/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-cream/80 backdrop-blur">
-            {product.category.name}
+        {/* Badge izquierdo: combo o categoría */}
+        {combo ? (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-ink-950">
+            <Package size={12} /> Combo
           </span>
+        ) : (
+          product.category?.name && (
+            <span className="absolute left-3 top-3 rounded-full bg-ink-950/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-cream/80 backdrop-blur">
+              {product.category.name}
+            </span>
+          )
         )}
-        {product.is_featured && !soldOut && (
-          <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-ink-950">
-            Destacado
+
+        {/* Badge derecho: oferta o destacado */}
+        {onSale && !soldOut ? (
+          <span className="absolute right-3 top-3 rounded-full bg-wine px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-cream">
+            -{pct}%
           </span>
+        ) : (
+          product.is_featured &&
+          !soldOut && (
+            <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-ink-950">
+              Destacado
+            </span>
+          )
         )}
+
         {soldOut && (
           <div className="absolute inset-0 flex items-center justify-center bg-ink-950/60 backdrop-blur-[1px]">
             <span className="rounded-full border border-cream/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream">
@@ -54,18 +78,38 @@ export default function ProductCard({ product }) {
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-cream">
           {product.name}
         </h3>
-        {(product.volume_ml || product.abv) && (
-          <p className="text-xs text-muted">
-            {product.volume_ml ? `${product.volume_ml} ml` : ''}
-            {product.volume_ml && product.abv ? ' · ' : ''}
-            {product.abv ? `${product.abv}°` : ''}
+
+        {combo && product.combo_items ? (
+          <p className="line-clamp-2 text-xs text-muted">Incluye: {product.combo_items}</p>
+        ) : (
+          (product.volume_ml || product.abv) && (
+            <p className="text-xs text-muted">
+              {product.volume_ml ? `${product.volume_ml} ml` : ''}
+              {product.volume_ml && product.abv ? ' · ' : ''}
+              {product.abv ? `${product.abv}°` : ''}
+            </p>
+          )
+        )}
+
+        {lowStock && (
+          <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-wine-light">
+            <Flame size={12} /> ¡Solo quedan {stock}!
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between pt-3">
-          <span className="font-display text-lg font-semibold text-amber-400">
-            {formatPrice(product.price)}
-          </span>
+        <div className="mt-auto flex items-end justify-between pt-3">
+          <div className="flex flex-col leading-none">
+            {onSale && (
+              <span className="text-xs text-muted line-through">
+                {formatPrice(product.compare_at_price)}
+              </span>
+            )}
+            <span
+              className={`font-display text-lg font-semibold ${onSale ? 'text-wine-light' : 'text-amber-400'}`}
+            >
+              {formatPrice(product.price)}
+            </span>
+          </div>
           <button
             onClick={handleAdd}
             disabled={soldOut}

@@ -21,7 +21,6 @@ import {
   TrendingDown,
   ArrowRight,
   Boxes,
-  XCircle,
   AlertTriangle,
 } from 'lucide-react'
 import { useOrders, useProducts } from '../hooks/useCatalog'
@@ -205,10 +204,18 @@ export default function Dashboard() {
       </div>
 
       {/* Métricas secundarias */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <MiniStat icon={XCircle} label="Tasa de cancelación" value={`${a.cancelRate.toFixed(0)}%`} tone={a.cancelRate > 15 ? 'text-wine-light' : 'text-cream'} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to="/admin/pedidos" className="block transition-transform hover:-translate-y-0.5">
+          <MiniStat
+            icon={ClipboardList}
+            label="Por confirmar"
+            value={a.pending}
+            tone={a.pending ? 'text-amber-400' : 'text-cream'}
+          />
+        </Link>
+        <MiniStat icon={TrendingUp} label="Conversión" value={`${a.conversion.toFixed(0)}%`} tone="text-cream" />
         <MiniStat icon={Boxes} label="Valor de inventario" value={money0(a.inventoryValue)} tone="text-cream" />
-        <MiniStat icon={AlertTriangle} label="Productos con stock bajo" value={a.lowStock.length} tone={a.lowStock.length ? 'text-amber-400' : 'text-cream'} />
+        <MiniStat icon={AlertTriangle} label="Stock bajo" value={a.lowStock.length} tone={a.lowStock.length ? 'text-amber-400' : 'text-cream'} />
       </div>
 
       {/* Top productos por ingreso + stock bajo */}

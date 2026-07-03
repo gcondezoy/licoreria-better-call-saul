@@ -28,7 +28,7 @@ export const seedBrands = [
 export const seedProducts = [
   {
     id: 'p1', name: 'Johnnie Walker Black Label 12 años', slug: 'jw-black-label-12',
-    category_id: 'c-whisky', brand_id: 'b-jw', price: 129.9, stock: 24,
+    category_id: 'c-whisky', brand_id: 'b-jw', price: 129.9, compare_at_price: 159.9, stock: 24,
     volume_ml: 750, abv: 40, is_featured: true, is_active: true,
     description: 'Blend escocés de 12 años, ahumado y con notas de vainilla y fruta madura. Un clásico infaltable.',
   },
@@ -40,7 +40,7 @@ export const seedProducts = [
   },
   {
     id: 'p3', name: 'Johnnie Walker Red Label', slug: 'jw-red-label',
-    category_id: 'c-whisky', brand_id: 'b-jw', price: 69.9, stock: 40,
+    category_id: 'c-whisky', brand_id: 'b-jw', price: 69.9, compare_at_price: 84.9, stock: 40,
     volume_ml: 750, abv: 40, is_featured: false, is_active: true,
     description: 'Versátil y con carácter, ideal para tragos largos y cócteles.',
   },
@@ -121,5 +121,19 @@ export const seedProducts = [
     category_id: 'c-espumantes', brand_id: 'b-tabernero', price: 34.9, stock: 26,
     volume_ml: 750, abv: 11.5, is_featured: false, is_active: true,
     description: 'Espumante peruano seco y festivo. La opción accesible para brindar.',
+  },
+  {
+    id: 'p17', name: 'Combo Previa', slug: 'combo-previa',
+    category_id: null, brand_id: null, price: 89.9, compare_at_price: 110.0, stock: 15,
+    is_combo: true, is_featured: true, is_active: true,
+    combo_items: '1 Ron Cartavio Solera, 2 Coca-Cola 1.5L, Hielo 2kg',
+    description: 'Todo listo para la previa: ron, gaseosas y hielo. Lo llevamos a tu puerta.',
+  },
+  {
+    id: 'p18', name: 'Combo Fiesta', slug: 'combo-fiesta',
+    category_id: null, brand_id: null, price: 149.9, compare_at_price: 189.0, stock: 10,
+    is_combo: true, is_featured: true, is_active: true,
+    combo_items: '1 Whisky JW Red Label, 1 Vodka Absolut, 4 energizantes, Hielo 2kg',
+    description: 'Para armar la fiesta completa. Whisky, vodka, energizantes y hielo.',
   },
 ]

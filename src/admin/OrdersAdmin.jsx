@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Phone, MapPin, Check, X, ArrowRight } from 'lucide-react'
+import { ChevronDown, Phone, MapPin, Check, X, ArrowRight, Trash2 } from 'lucide-react'
 import { useOrders } from '../hooks/useCatalog'
 import { useOrderMutations } from '../hooks/useAdminMutations'
 import { Spinner, EmptyState } from '../components/ui'
@@ -9,8 +9,9 @@ import { STATUS_META, STATUS_ORDER } from './orderStatus'
 export default function OrdersAdmin() {
   const [filter, setFilter] = useState('todos')
   const { data: orders, isLoading } = useOrders(filter)
-  const { updateStatus } = useOrderMutations()
+  const { updateStatus, remove } = useOrderMutations()
   const [expanded, setExpanded] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   return (
     <div className="space-y-6">
@@ -135,6 +136,35 @@ export default function OrdersAdmin() {
                               <Check size={14} /> Pedido completado
                             </span>
                           )}
+
+                          {/* Eliminar: solo en pedidos sin stock aplicado (pendiente/cancelado) */}
+                          {(o.status === 'pendiente' || o.status === 'cancelado') &&
+                            (confirmDelete === o.id ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    remove.mutate(o.id)
+                                    setConfirmDelete(null)
+                                  }}
+                                  className="btn-wine px-4 py-2 text-xs"
+                                >
+                                  <Trash2 size={14} /> Confirmar
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDelete(null)}
+                                  className="btn-ghost px-4 py-2 text-xs"
+                                >
+                                  No
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDelete(o.id)}
+                                className="inline-flex items-center gap-1.5 px-2 py-2 text-xs text-muted hover:text-wine-light"
+                              >
+                                <Trash2 size={14} /> Eliminar
+                              </button>
+                            ))}
                         </div>
                       </div>
                     </div>
