@@ -130,7 +130,7 @@ begin
 end;
 $$;
 
--- Cambiar estado es solo del admin: quitamos el permiso público por defecto de
--- Postgres y dejamos solo a usuarios autenticados.
-revoke execute on function set_order_status(uuid, text) from public;
+-- Cambiar estado es solo del admin. Quitamos el permiso público por defecto de
+-- Postgres Y el que Supabase le da al rol anon; dejamos solo a autenticados.
+revoke execute on function set_order_status(uuid, text) from public, anon;
 grant execute on function set_order_status(uuid, text) to authenticated;

@@ -39,6 +39,10 @@ const TOOLTIP_STYLE = {
   color: '#f4efe6',
   fontSize: 12,
 }
+// Recharts colorea el texto del label/valor por su cuenta (queda oscuro sobre
+// el fondo dark). Forzamos texto claro para que se lea.
+const TOOLTIP_LABEL = { color: '#f4efe6', fontWeight: 600, marginBottom: 2 }
+const TOOLTIP_ITEM = { color: '#a19a8c' }
 
 function DeltaBadge({ value }) {
   if (value == null) return <span className="text-xs text-muted">— sin comparación</span>
@@ -143,6 +147,8 @@ export default function Dashboard() {
                 <YAxis tick={{ fill: '#a19a8c', fontSize: 11 }} tickFormatter={money0} width={64} />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
+                  labelStyle={TOOLTIP_LABEL}
+                  itemStyle={TOOLTIP_ITEM}
                   formatter={(v) => [formatPrice(v), 'Ventas']}
                   cursor={{ stroke: '#c8962c', strokeOpacity: 0.3 }}
                 />
@@ -178,7 +184,12 @@ export default function Dashboard() {
                         <Cell key={i} fill={CAT_COLORS[i % CAT_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatPrice(v)} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      labelStyle={TOOLTIP_LABEL}
+                      itemStyle={TOOLTIP_ITEM}
+                      formatter={(v) => formatPrice(v)}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -234,7 +245,13 @@ export default function Dashboard() {
                     tick={{ fill: '#a19a8c', fontSize: 11 }}
                     tickFormatter={(v) => (v.length > 18 ? v.slice(0, 18) + '…' : v)}
                   />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [formatPrice(v), 'Ingreso']} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelStyle={TOOLTIP_LABEL}
+                    itemStyle={TOOLTIP_ITEM}
+                    formatter={(v) => [formatPrice(v), 'Ingreso']}
+                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  />
                   <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                     {a.topProducts.map((_, i) => (
                       <Cell key={i} fill={i === 0 ? '#c8962c' : '#a67a1f'} />
@@ -289,15 +306,22 @@ export default function Dashboard() {
             {recent.map((o) => {
               const meta = STATUS_META[o.status] || STATUS_META.pendiente
               return (
-                <div key={o.id} className="flex items-center justify-between gap-4 p-4 text-sm">
+                <div
+                  key={o.id}
+                  className="grid grid-cols-[1fr_104px_84px] items-center gap-3 p-4 text-sm sm:grid-cols-[1fr_130px_100px]"
+                >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-cream">{o.customer_name}</p>
                     <p className="text-xs text-muted">#{String(o.id).slice(-6).toUpperCase()}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>
+                  <span
+                    className={`justify-self-start rounded-full px-2.5 py-1 text-xs font-semibold ${meta.badge}`}
+                  >
                     {meta.label}
                   </span>
-                  <span className="shrink-0 font-semibold text-amber-400">{formatPrice(o.total)}</span>
+                  <span className="justify-self-end font-semibold text-amber-400">
+                    {formatPrice(o.total)}
+                  </span>
                 </div>
               )
             })}
