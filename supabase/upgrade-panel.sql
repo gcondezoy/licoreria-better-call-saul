@@ -130,4 +130,7 @@ begin
 end;
 $$;
 
+-- Cambiar estado es solo del admin: quitamos el permiso público por defecto de
+-- Postgres y dejamos solo a usuarios autenticados.
+revoke execute on function set_order_status(uuid, text) from public;
 grant execute on function set_order_status(uuid, text) to authenticated;

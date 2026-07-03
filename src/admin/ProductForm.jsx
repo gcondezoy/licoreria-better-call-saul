@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
+import ImageUpload from './ImageUpload'
 
 const schema = z
   .object({
@@ -40,6 +41,8 @@ export default function ProductForm({ product, categories, brands, onSubmit, sav
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
@@ -145,13 +148,14 @@ export default function ProductForm({ product, categories, brands, onSubmit, sav
         </div>
       </div>
 
-      <div>
-        <label className="label">URL de imagen (opcional)</label>
-        <input {...register('image_url')} className="input" placeholder="https://… (si vacío, se usa la ilustración)" />
-        {errors.image_url && (
-          <p className="mt-1 text-xs text-wine-light">{errors.image_url.message}</p>
-        )}
-      </div>
+      <input type="hidden" {...register('image_url')} />
+      <ImageUpload
+        value={watch('image_url')}
+        onChange={(url) => setValue('image_url', url, { shouldValidate: true, shouldDirty: true })}
+      />
+      {errors.image_url && (
+        <p className="mt-1 text-xs text-wine-light">{errors.image_url.message}</p>
+      )}
 
       <div>
         <label className="label">Descripción</label>

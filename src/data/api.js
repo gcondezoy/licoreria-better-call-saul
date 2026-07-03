@@ -134,6 +134,31 @@ export async function deleteProduct(id) {
   db.products = db.products.filter((p) => p.id !== id)
 }
 
+// Sube una imagen de producto al Storage de Supabase y devuelve su URL pública.
+// En modo demo devuelve un data URL local para poder previsualizar.
+export async function uploadProductImage(file) {
+  if (isSupabaseConfigured) {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const rand =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.round(Math.random() * 1e9)}`
+    const path = `${rand}.${ext}`
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(path, file, { cacheControl: '3600', upsert: false })
+    if (error) throw error
+    const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+    return data.publicUrl
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 // ============================ CATEGORÍAS ============================
 
 export async function listCategories() {

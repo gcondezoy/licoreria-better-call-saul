@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal, X, Plus } from 'lucide-react'
 import { useProducts, useCategories, useBrands } from '../hooks/useCatalog'
 import ProductCard from '../components/ProductCard'
+import RecentlyViewed from '../components/RecentlyViewed'
 import { SkeletonGrid, EmptyState } from '../components/ui'
 import { SITE } from '../config/site'
 
@@ -292,6 +293,8 @@ export default function Catalog() {
           )}
         </section>
       </div>
+
+      <RecentlyViewed />
 
       {/* Panel de filtros móvil (bottom sheet) */}
       <div

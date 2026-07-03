@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Minus, Plus, ShoppingBag, Check, MessageCircle, Package } from 'lucide-react'
 import { useProduct, useProducts } from '../hooks/useCatalog'
 import ProductImage from '../components/ProductImage'
 import ProductCard from '../components/ProductCard'
+import RecentlyViewed from '../components/RecentlyViewed'
 import { Spinner, EmptyState } from '../components/ui'
 import { useCart } from '../store/cartStore'
+import { addRecent } from '../lib/recentlyViewed'
 import { formatPrice, isOnSale, discountPct, SITE } from '../config/site'
 
 export default function ProductDetail() {
@@ -18,6 +20,11 @@ export default function ProductDetail() {
   const { data: related } = useProducts(
     product ? { categorySlug: product.category?.slug } : undefined,
   )
+
+  // Registra el producto como "visto recientemente".
+  useEffect(() => {
+    if (product) addRecent(product)
+  }, [product])
 
   if (isLoading) return <Spinner label="Cargando producto…" />
   if (!product)
@@ -194,6 +201,8 @@ export default function ProductDetail() {
           </div>
         </section>
       )}
+
+      <RecentlyViewed excludeSlug={product.slug} />
     </div>
   )
 }

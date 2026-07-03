@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { Plus, Check, Package, Flame } from 'lucide-react'
+import { Plus, Check, Package, Flame, Eye } from 'lucide-react'
 import { useState } from 'react'
 import ProductImage from './ProductImage'
+import QuickView from './QuickView'
 import { formatPrice, isOnSale, discountPct } from '../config/site'
 import { useCart } from '../store/cartStore'
 
@@ -10,6 +11,7 @@ const LOW_STOCK = 5
 export default function ProductCard({ product }) {
   const addItem = useCart((s) => s.addItem)
   const [added, setAdded] = useState(false)
+  const [quick, setQuick] = useState(false)
   const stock = product.stock ?? 0
   const soldOut = stock <= 0
   const lowStock = !soldOut && stock <= LOW_STOCK
@@ -26,6 +28,7 @@ export default function ProductCard({ product }) {
   }
 
   return (
+    <>
     <Link
       to={`/producto/${product.slug}`}
       className="card group relative flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-1 hover:border-amber-500/40"
@@ -58,6 +61,21 @@ export default function ProductCard({ product }) {
               Destacado
             </span>
           )
+        )}
+
+        {/* Vista rápida (aparece al pasar el mouse) */}
+        {!soldOut && (
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              setQuick(true)
+            }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 translate-y-2 rounded-full bg-ink-950/80 px-4 py-2 text-xs font-semibold text-cream opacity-0 backdrop-blur transition-all duration-200 hover:bg-ink-950 group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:transition-none"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Eye size={14} /> Vista rápida
+            </span>
+          </button>
         )}
 
         {soldOut && (
@@ -128,5 +146,7 @@ export default function ProductCard({ product }) {
         </div>
       </div>
     </Link>
+    <QuickView product={product} open={quick} onClose={() => setQuick(false)} />
+    </>
   )
 }
