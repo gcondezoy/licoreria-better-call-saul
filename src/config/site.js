@@ -14,7 +14,12 @@ export const SITE = {
   // Redes (opcional)
   instagram: 'https://instagram.com',
   facebook: 'https://facebook.com',
+  // Cloudflare Turnstile (anti-bot en el checkout). Vacío = desactivado.
+  turnstileSiteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '',
 }
+
+// ¿Está activo el CAPTCHA anti-bot?
+export const isCaptchaEnabled = Boolean(SITE.turnstileSiteKey)
 
 // Formatea un precio en soles.
 export function formatPrice(value) {

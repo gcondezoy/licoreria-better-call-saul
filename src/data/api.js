@@ -3,6 +3,7 @@
 // misma en ambos modos, así que la UI no cambia.
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isCaptchaEnabled } from '../config/site'
 import { db, genId, now } from './demoStore'
 
 const PRODUCT_SELECT = '*, category:categories(id,name,slug,color), brand:brands(id,name)'
@@ -242,12 +243,26 @@ export async function deleteBrand(id) {
 
 // ============================ PEDIDOS ============================
 
-export async function createOrder({ customer, items, total, notes }) {
+export async function createOrder({ customer, items, total, notes, captchaToken }) {
   if (isSupabaseConfigured) {
-    // Camino ideal: función atómica que crea el pedido y descuenta stock.
+    const cust = { name: customer.name, phone: customer.phone, address: customer.address }
+    const slimItems = items.map((it) => ({ id: it.id, quantity: it.quantity }))
+
+    // Con CAPTCHA activo, el pedido pasa por la Edge Function que verifica el
+    // token anti-bot en el servidor antes de crearlo.
+    if (isCaptchaEnabled) {
+      const { data, error } = await supabase.functions.invoke('place-order', {
+        body: { customer: cust, items: slimItems, notes: notes || null, captchaToken },
+      })
+      if (error) throw new Error('No se pudo procesar el pedido. Reintenta.')
+      if (data?.error) throw new Error(data.error)
+      return { id: data.id }
+    }
+
+    // Sin CAPTCHA: función atómica directa que crea el pedido y descuenta stock.
     const { data, error } = await supabase.rpc('place_order', {
-      p_customer: { name: customer.name, phone: customer.phone, address: customer.address },
-      p_items: items.map((it) => ({ id: it.id, quantity: it.quantity })),
+      p_customer: cust,
+      p_items: slimItems,
       p_notes: notes || null,
     })
     if (!error && data) return { id: data }

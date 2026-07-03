@@ -19,8 +19,9 @@ import { createOrder } from '../data/api'
 import { buildWhatsappUrl } from '../lib/whatsapp'
 import ProductImage from '../components/ProductImage'
 import WhatsappGlyph from '../components/WhatsappGlyph'
+import Turnstile from '../components/Turnstile'
 import { EmptyState } from '../components/ui'
-import { formatPrice, SITE } from '../config/site'
+import { formatPrice, isCaptchaEnabled, SITE } from '../config/site'
 
 const schema = z.object({
   name: z.string().min(3, 'Ingresa tu nombre completo'),
@@ -35,6 +36,7 @@ const schema = z.object({
 export default function Cart() {
   const { items, setQuantity, removeItem, total, clear } = useCart()
   const [sent, setSent] = useState(null)
+  const [captchaToken, setCaptchaToken] = useState('')
   const {
     register,
     handleSubmit,
@@ -56,6 +58,7 @@ export default function Cart() {
         items: orderedItems,
         total: orderedTotal,
         notes: values.notes,
+        captchaToken,
       })
     } catch (e) {
       // Aunque falle guardar en la BD, dejamos que el cliente igual nos escriba.
@@ -286,7 +289,17 @@ export default function Cart() {
               </div>
             </div>
 
-            <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
+            {isCaptchaEnabled && (
+              <div className="flex justify-center">
+                <Turnstile onToken={setCaptchaToken} />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting || (isCaptchaEnabled && !captchaToken)}
+              className="btn-primary w-full"
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 size={18} className="animate-spin" /> Procesando…
